@@ -2,7 +2,7 @@ require 'pathname'
 
 module Listen
   class Listener
-    attr_reader :directories, :directories_records, :block, :adapter, :adapter_options, :use_relative_paths
+    attr_reader :directories, :directories_records, :block, :adapter, :adapter_options, :use_relative_paths, :should_notify_path_change
 
     BLOCKING_PARAMETER_DEPRECATION_MESSAGE = <<-EOS.gsub(/^\s*/, '')
       The blocking parameter of Listen::Listener#start is deprecated.\n
@@ -32,6 +32,7 @@ module Listen
       directories = args.flatten
       initialize_directories_and_directories_records(directories)
       initialize_relative_paths_usage(options)
+      initialize_notify_paths_changes(options)
       @block = block
 
       ignore(*options.delete(:ignore))
@@ -223,6 +224,21 @@ module Listen
       @block = block
       self
     end
+    
+    # Sets whether the paths should be added
+    # to change and remove.
+    #
+    # 
+    # 
+    #
+    # @param [Boolean] value whether to enable relative paths in the callback or not
+    #
+    # @return [Listen::Listener] the listener    
+    #
+    def notify_path_change(value) # modified, added, removed
+      @should_notify_path_change = block
+      self
+    end
 
     # Runs the callback passing it the changes if there are any.
     #
@@ -256,6 +272,12 @@ module Listen
       end
       @use_relative_paths = directories.one? && options.delete(:relative_paths) { true }
     end
+    
+    # Initializes whether or not path changes notifies user.
+    #
+    def initialize_notify_paths_changes(options)
+      @should_notify_path_change = options.delete(:notify_path_change) { true }
+    end
 
     # Build the directory record concurrently and initialize the adapter.
     #
@@ -288,6 +310,7 @@ module Listen
       directories_records.inject({}) do |h, r|
         # directory records skips paths outside their range, so passing the
         # whole `directories` array is not a problem.
+        options = options.merge(:notify_path_change => should_notify_path_change)
         record_changes = r.fetch_changes(directories_to_search, options.merge(:relative_paths => use_relative_paths))
 
         if h.empty?

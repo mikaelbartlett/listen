@@ -234,6 +234,9 @@ module Listen
 
       # Directory has been removed
       else
+        if options[:notify_path_change]
+          @changes[:removed] << (options[:relative_paths] ? relative_to_base(path) : path)
+        end
         detect_modifications_and_removals(path, options)
         @paths[File.dirname(path)].delete(File.basename(path))
         @paths.delete("#{File.dirname(path)}/#{File.basename(path)}")
@@ -298,6 +301,9 @@ module Listen
           if ignored?(path + File::SEPARATOR) || (directory != path && (!options[:recursive] && existing_path?(path)))
             Find.prune # Don't look any further into this directory.
           else
+            if options[:notify_path_change]
+              @changes[:added] << (options[:relative_paths] ? relative_to_base(path) : path)
+            end
             insert_path(path)
           end
         elsif !ignored?(path) && filtered?(path) && !existing_path?(path)
