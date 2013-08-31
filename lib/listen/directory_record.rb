@@ -12,7 +12,7 @@ module Listen
     attr_reader :directory, :paths, :sha1_checksums
 
     # The default list of directories that get ignored by the listener.
-    DEFAULT_IGNORED_DIRECTORIES = %w[.rbx .bundle .git .svn log tmp vendor]
+    DEFAULT_IGNORED_DIRECTORIES = %w[.rbx .bundle .git .svn bundle log tmp vendor]
 
     # The default list of files that get ignored by the listener.
     DEFAULT_IGNORED_EXTENSIONS  = %w[.DS_Store]
@@ -350,7 +350,7 @@ module Listen
     #
     def sha1_checksum(path)
       Digest::SHA1.file(path).to_s
-    rescue Errno::EACCES, Errno::ENOENT, Errno::ENXIO, Errno::EOPNOTSUPP, Errno::EBADF
+    rescue
       nil
     end
 

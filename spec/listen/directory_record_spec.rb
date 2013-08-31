@@ -9,7 +9,7 @@ describe Listen::DirectoryRecord do
   describe '.generate_default_ignoring_patterns' do
     it 'creates regexp patterns from the default ignored directories and extensions' do
       described_class.generate_default_ignoring_patterns.should include(
-        %r{^(?:\.rbx|\.bundle|\.git|\.svn|log|tmp|vendor)/},
+        %r{^(?:\.rbx|\.bundle|\.git|\.svn|bundle|log|tmp|vendor)/},
         %r{(?:\.DS_Store)$}
       )
     end
@@ -1201,7 +1201,7 @@ describe Listen::DirectoryRecord do
           lambda {
             touch 'removed_file.txt'
             changes(path) { touch 'removed_file.txt' }
-          }.should_not raise_error(Errno::ENOENT)
+          }.should_not raise_error
         end
       end
     end
@@ -1211,7 +1211,7 @@ describe Listen::DirectoryRecord do
         fixtures do |path|
           require 'socket'
           UNIXServer.new('unix_domain_socket.sock')
-          lambda { changes(path){} }.should_not raise_error(Errno::ENXIO)
+          lambda { changes(path){} }.should_not raise_error
         end
       end
     end

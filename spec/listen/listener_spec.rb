@@ -1,8 +1,7 @@
 require 'spec_helper'
 
 describe Listen::Listener do
-  let(:adapter)             { mock(Listen::Adapter, :start => true).as_null_object }
-  let(:watched_directory)   { File.dirname(__FILE__) }
+  let(:adapter)             { double(Listen::Adapter, :start => true).as_null_object }
   let(:watched_directories) { [File.dirname(__FILE__), File.expand_path('../..', __FILE__)] }
 
   before do
@@ -16,6 +15,8 @@ describe Listen::Listener do
 
   describe '#initialize' do
     context 'listening to a single directory' do
+      let(:watched_directory)   { File.dirname(__FILE__) }
+      let(:watched_directories) { nil }
       subject { described_class.new(watched_directory) }
 
       it 'sets the directories' do
@@ -23,15 +24,22 @@ describe Listen::Listener do
       end
 
       context 'with no options' do
-        it 'sets the option for using relative paths in the callback to true' do
-          subject.instance_variable_get(:@use_relative_paths).should eq true
+        it 'sets the option for using relative paths in the callback to false' do
+          subject.instance_variable_get(:@use_relative_paths).should eq false
         end
       end
 
       context 'with :relative_paths => false' do
         it 'sets the option for using relative paths in the callback to false' do
-          listener = described_class.new(watched_directories, :relative_paths => false)
+          listener = described_class.new(watched_directory, :relative_paths => false)
           listener.instance_variable_get(:@use_relative_paths).should eq false
+        end
+      end
+
+      context 'with :relative_paths => true' do
+        it 'sets the option for using relative paths in the callback to true' do
+          listener = described_class.new(watched_directory, :relative_paths => true)
+          listener.instance_variable_get(:@use_relative_paths).should eq true
         end
       end
     end
@@ -49,6 +57,13 @@ describe Listen::Listener do
         end
       end
 
+      context 'with :relative_paths => false' do
+        it 'sets the option for using relative paths in the callback to false' do
+          listener = described_class.new(watched_directories, :relative_paths => false)
+          listener.instance_variable_get(:@use_relative_paths).should eq false
+        end
+      end
+
       context 'with :relative_paths => true' do
         it 'warns' do
           Kernel.should_receive(:warn).with("[Listen warning]: #{Listen::Listener::RELATIVE_PATHS_WITH_MULTIPLE_DIRECTORIES_WARNING_MESSAGE}")
@@ -62,15 +77,22 @@ describe Listen::Listener do
       end
     end
 
-    it 'converts the passed path into an absolute path - #21' do
-      described_class.new(File.join(watched_directory, '..')).directories.should eq [File.expand_path('..', watched_directory)]
+    context 'with a directory' do
+      let(:watched_directory)   { File.dirname(__FILE__) }
+      it 'converts the passed path into an absolute path - #21' do
+        described_class.new(File.join(watched_directory, '..')).directories.should eq [File.expand_path('..', watched_directory)]
+      end
     end
 
     context 'with custom options' do
+      let(:watched_directory)   { File.dirname(__FILE__) }
+      let(:adapter_class) { double('adapter class') }
+
       let(:options) do
         {
           :ignore => /\.ssh/, :filter => [/.*\.rb/, /.*\.md/],
-          :latency => 0.5, :force_polling => true, :relative_paths => true
+          :latency => 0.5, :force_polling => true, :relative_paths => true,
+          :force_adapter => adapter_class
         }
       end
       subject { described_class.new(watched_directory, options) }
@@ -88,7 +110,7 @@ describe Listen::Listener do
       end
 
       it 'sets adapter_options' do
-        subject.instance_variable_get(:@adapter_options).should eq(:latency => 0.5, :force_polling => true)
+        subject.instance_variable_get(:@adapter_options).should eq(:latency => 0.5, :force_polling => true, :force_adapter => adapter_class)
       end
     end
   end
@@ -176,6 +198,21 @@ describe Listen::Listener do
         record.should_receive(:fetch_changes).with(directories, an_instance_of(Hash)).and_return(changes)
       end
       subject.on_change(directories)
+    end
+
+    context "with a callback raising an exception" do
+      let(:callback) { Proc.new { raise 'foo' } }
+
+      before do
+        subject.change(&callback)
+        subject.stub(:fetch_records_changes => { :modified => ['foo'], :added => [], :removed => [] } )
+      end
+
+      it "stops the adapter and warns" do
+        Kernel.should_receive(:warn).with("[Listen warning]: Change block raise an execption: #<RuntimeError: foo>")
+        subject.on_change(directories)
+      end
+
     end
 
     context 'with no changes to report' do
