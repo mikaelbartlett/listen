@@ -1,14 +1,4 @@
-## 1.3.0 - Aug 14, 2013
-
-### Change
-
-- Defaults `Listener#relative_paths` to `false` when listening to a single directory (see [#131][]). ([@rehevkor5][])
-
-## 1.2.3 - Aug 9, 2013
-
-### Improvement
-
-- Rescue changes callback and warms if something bad happens. (reported by [@21croissants][], added by [@thibaudgg][])
+# !!! Moved to Github [releases](https://github.com/guard/listen/releases) page !!!
 
 ## 1.2.2 - Jun 17, 2013
 
